@@ -1,0 +1,4 @@
+gpiozero
+RPi.GPIO
+influxdb
+pandas

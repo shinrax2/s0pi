@@ -1,0 +1,9 @@
+{
+    "s0_pin" : "GPIO26",
+    "pulse_per_kwh": 1000,
+    "device_name" : "devpi",
+    "influxdb_host" : "",
+    "influxdb_dbname" : "",
+    "influxdb_username": "",
+    "influxdb_password": ""
+}
