@@ -9,7 +9,7 @@ import argparse
 # pip
 import gpiozero # gpiozero
 from gpiozero.pins.rpigpio import RPiGPIOFactory # RPi.GPIO
-import influxdb
+import influxdb # influxdb
 
 def s0_change(ticks, state):
     if state == True:
@@ -44,17 +44,23 @@ print(f"config(file: '{configfile}'): {config}")
 global s0_counter
 global client
 s0_counter = 0
-client = influxdb.InfluxDBClient(host = config["influxdb_host"], database = config["influxdb_dbname"], username = config["influxdb_username"], password = config["influxdb_password"])
+client = influxdb.InfluxDBClient(
+    host = config["influxdb_host"], 
+    database = config["influxdb_dbname"], 
+    username = config["influxdb_username"], 
+    password = config["influxdb_password"]
+)
 
 # setting up pins
 factory = RPiGPIOFactory()
-dev =  gpiozero.GPIODevice(config["s0_pin"],
-pin_factory=factory
+dev =  gpiozero.GPIODevice(
+    config["s0_pin"],
+    pin_factory=factory
 )
-dev.pin.edges = "rising"
-dev.pin.bounce = 90/1000
+dev.pin.edges = config["gpio_edges"]
+dev.pin.bounce = config["gpio_bounce_in_ms"]/1000
+dev.pin.pull = config["gpio_pull"]
 dev.pin.when_changed = s0_change
-dev.pin.pull = "up"
 # signal pause() to stay alive
 try:
     signal.pause()
