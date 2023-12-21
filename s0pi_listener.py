@@ -15,17 +15,27 @@ def s0_change(ticks, state):
     if state == True:
         global s0_counter
         global client
-        s0_counter += 1
-        print(f"{datetime.datetime.now()}\tpulse detected. No: {s0_counter}")
-        json_data = [
-                {
-                    "measurement": "generic",
-                    "tags": {},
-                    "time": None,
-                    "fields": {"pulse_number" : s0_counter, "device_name": config["device_name"]}
-                }
-        ]
-        client.write_points(json_data)
+        global first
+        if first == True:
+            s0_counter += 1
+            print(f"{datetime.datetime.now()}\tpulse detected. No: {s0_counter}")
+            json_data = [
+                    {
+                        "measurement": "generic",
+                        "tags": {},
+                        "time": None,
+                        "fields": {"pulse_number" : s0_counter, "device_name": config["device_name"]}
+                    }
+            ]
+            try:
+                client.write_points(json_data)
+            except InfluxDBClientError, InfluxDBServerError:
+                try:
+                    client.write_points(json_data)
+                except InfluxDBClientError, InfluxDBServerError:
+                    pass
+        else:
+            first = False
 # argparse
 parser = argparse.ArgumentParser(description="")
 parser.add_argument("-c", "--config", action="store", help="")
@@ -43,6 +53,8 @@ print(f"config(file: '{configfile}'): {config}")
 # setup runtime
 global s0_counter
 global client
+global first
+first = True
 s0_counter = 0
 client = influxdb.InfluxDBClient(
     host = config["influxdb_host"], 
