@@ -29,10 +29,10 @@ def s0_change(ticks, state):
             ]
             try:
                 client.write_points(json_data)
-            except InfluxDBClientError, InfluxDBServerError:
+            except (InfluxDBClientError, InfluxDBServerError):
                 try:
                     client.write_points(json_data)
-                except InfluxDBClientError, InfluxDBServerError:
+                except (InfluxDBClientError, InfluxDBServerError):
                     pass
         else:
             first = False
