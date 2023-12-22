@@ -11,31 +11,36 @@ import gpiozero # gpiozero
 from gpiozero.pins.rpigpio import RPiGPIOFactory # RPi.GPIO
 import influxdb # influxdb
 
+def ensure_write(client, data):
+    retry_limit = 32
+    retry = 0
+    sucess = False
+    while retry <= retry_limit and sucess == False:
+        try:
+            client.write_points(data)
+            sucess = True
+        except (InfluxDBClientError, InfluxDBServerError):
+            time.sleep(0.2)
+            pass
+
 def s0_change(ticks, state):
-    if state == True:
-        global s0_counter
-        global client
-        global first
-        if first == True:
-            s0_counter += 1
-            print(f"{datetime.datetime.now()}\tpulse detected. No: {s0_counter}")
-            json_data = [
-                    {
-                        "measurement": "generic",
-                        "tags": {},
-                        "time": None,
-                        "fields": {"pulse_number" : s0_counter, "device_name": config["device_name"]}
-                    }
-            ]
-            try:
-                client.write_points(json_data)
-            except (InfluxDBClientError, InfluxDBServerError):
-                try:
-                    client.write_points(json_data)
-                except (InfluxDBClientError, InfluxDBServerError):
-                    pass
-        else:
-            first = False
+    global s0_counter
+    global client
+    global first
+    if first == True:
+        s0_counter += 1
+        print(f"{datetime.datetime.now()}\tpulse detected. No: {s0_counter}")
+        json_data = [
+                {
+                    "measurement": "generic",
+                    "tags": {},
+                    "time": datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'),
+                    "fields": {"pulse_number" : s0_counter, "device_name": config["device_name"]}
+                }
+        ]
+        ensure_write(client, json_data)
+    else:
+        first = False
 # argparse
 parser = argparse.ArgumentParser(description="")
 parser.add_argument("-c", "--config", action="store", help="")
