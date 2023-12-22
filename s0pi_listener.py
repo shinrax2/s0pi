@@ -20,6 +20,7 @@ def ensure_write(client, data):
             client.write_points(data)
             sucess = True
         except (InfluxDBClientError, InfluxDBServerError):
+            print(f"writing to db failed! starting retry No. {retry} of {retry_limit}")
             time.sleep(0.2)
             pass
 
