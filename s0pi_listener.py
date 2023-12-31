@@ -5,13 +5,14 @@ import datetime
 import signal
 import os
 import argparse
+import asyncio
 
 # pip
 import gpiozero # gpiozero
 from gpiozero.pins.rpigpio import RPiGPIOFactory # RPi.GPIO
 import influxdb # influxdb
 
-def ensure_write(client, data):
+async def ensure_write(client, data):
     retry_limit = 32
     retry = 0
     sucess = False
@@ -21,27 +22,24 @@ def ensure_write(client, data):
             sucess = True
         except (influxdb.exceptions.InfluxDBClientError, influxdb.exceptions.InfluxDBServerError):
             print(f"writing to db failed! starting retry No. {retry} of {retry_limit}")
+            retry += 1
             time.sleep(0.2)
-            pass
 
 def s0_change(ticks, state):
     global s0_counter
     global client
-    global first
-    if first == True:
-        s0_counter += 1
-        print(f"{datetime.datetime.now()}\tpulse detected. No: {s0_counter}")
-        json_data = [
-                {
-                    "measurement": "generic",
-                    "tags": {},
-                    "time": datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'),
-                    "fields": {"pulse_number" : s0_counter, "device_name": config["device_name"]}
-                }
-        ]
-        ensure_write(client, json_data)
-    else:
-        first = False
+    global config
+    s0_counter += 1
+    print(f"{datetime.datetime.now()}\tpulse detected. No: {s0_counter}")
+    json_data = [
+            {
+                "measurement": "generic",
+                "tags": {},
+                "time": datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'),
+                "fields": {"pulse_number" : s0_counter, "device_name": config["device_name"]}
+            }
+    ]
+    asyncio.ensure_future(ensure_write(client, json_data))
 # argparse
 parser = argparse.ArgumentParser(description="")
 parser.add_argument("-c", "--config", action="store", help="")
@@ -52,6 +50,7 @@ if args.config is not None:
     configfile = args.config
 starttime = datetime.datetime.now()
 # load config
+global config
 with open(configfile, "r") as f:
     config = json.loads(f.read())
 print(f"config(file: '{configfile}'): {config}")
@@ -59,8 +58,6 @@ print(f"config(file: '{configfile}'): {config}")
 # setup runtime
 global s0_counter
 global client
-global first
-first = True
 s0_counter = 0
 client = influxdb.InfluxDBClient(
     host = config["influxdb_host"], 
