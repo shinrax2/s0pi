@@ -6,11 +6,23 @@ import signal
 import os
 import argparse
 import asyncio
+import threading
 
 # pip
 import gpiozero # gpiozero
 from gpiozero.pins.rpigpio import RPiGPIOFactory # RPi.GPIO
 import influxdb # influxdb
+
+
+
+_loop = None
+
+def fire_and_forget(coro):
+    global _loop
+    if _loop is None:
+        _loop = asyncio.new_event_loop()
+        threading.Thread(target=_loop.run_forever, daemon=True).start()
+    _loop.call_soon_threadsafe(asyncio.create_task, coro)
 
 async def ensure_write(client, data):
     retry_limit = 32
@@ -39,7 +51,7 @@ def s0_change(ticks, state):
                 "fields": {"pulse_number" : s0_counter, "device_name": config["device_name"]}
             }
     ]
-    asyncio.ensure_future(ensure_write(client, json_data))
+    fire_and_forget(ensure_write(client, json_data))
 # argparse
 parser = argparse.ArgumentParser(description="")
 parser.add_argument("-c", "--config", action="store", help="")
