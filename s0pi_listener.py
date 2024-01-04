@@ -24,7 +24,7 @@ def fire_and_forget(coro):
         threading.Thread(target=_loop.run_forever, daemon=True).start()
     _loop.call_soon_threadsafe(asyncio.create_task, coro)
 
-async def ensure_write(client, data):
+def ensure_write(client, data):
     retry_limit = 32
     retry = 0
     sucess = False
@@ -37,12 +37,12 @@ async def ensure_write(client, data):
             retry += 1
             time.sleep(0.2)
 
-def s0_change(ticks, state):
+async def s0_async():
     global s0_counter
     global client
     global config
     s0_counter += 1
-    print(f"{datetime.datetime.now()}\tpulse detected. No: {s0_counter}")
+    print(f"{datetime.datetime.now(datetime.timezone.utc)}\tpulse detected. No: {s0_counter}")
     json_data = [
             {
                 "measurement": "generic",
@@ -51,7 +51,9 @@ def s0_change(ticks, state):
                 "fields": {"pulse_number" : s0_counter, "device_name": config["device_name"]}
             }
     ]
-    fire_and_forget(ensure_write(client, json_data))
+    ensure_write(client, json_data)
+def s0_change(ticks, state):
+    fire_and_forget(s0_async())
 # argparse
 parser = argparse.ArgumentParser(description="")
 parser.add_argument("-c", "--config", action="store", help="")
