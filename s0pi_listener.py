@@ -13,7 +13,22 @@ import gpiozero # gpiozero
 from gpiozero.pins.rpigpio import RPiGPIOFactory # RPi.GPIO
 import influxdb # influxdb
 
+class Queue():
+    def __init__(self, client):
+        self.queue = []
+        self.run = True
+        self.client = client
 
+    async def loop(self):
+        while self.run == True:
+            if len(self.queue) == 0:
+                asyncio.sleep(1)
+            else:
+                ensure_write(self.client, self.queue[0])
+                self.queue = self.queue[1:]
+    
+    async def add(self, data):
+        self.queue.append(data)
 
 _loop = None
 
@@ -39,8 +54,8 @@ def ensure_write(client, data):
 
 async def s0_async():
     global s0_counter
-    global client
     global config
+    global q
     s0_counter += 1
     print(f"{datetime.datetime.now(datetime.timezone.utc)}\tpulse detected. No: {s0_counter}")
     json_data = [
@@ -51,7 +66,8 @@ async def s0_async():
                 "fields": {"pulse_number" : s0_counter, "device_name": config["device_name"]}
             }
     ]
-    ensure_write(client, json_data)
+    await q.add(json_data)
+
 def s0_change(ticks, state):
     fire_and_forget(s0_async())
 # argparse
@@ -72,6 +88,7 @@ print(f"config(file: '{configfile}'): {config}")
 # setup runtime
 global s0_counter
 global client
+global q
 s0_counter = 0
 client = influxdb.InfluxDBClient(
     host = config["influxdb_host"], 
@@ -79,7 +96,8 @@ client = influxdb.InfluxDBClient(
     username = config["influxdb_username"], 
     password = config["influxdb_password"]
 )
-
+q = Queue(client)
+fire_and_forget(q.loop())
 # setting up pins
 factory = RPiGPIOFactory()
 dev =  gpiozero.GPIODevice(
