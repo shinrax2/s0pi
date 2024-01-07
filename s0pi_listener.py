@@ -22,7 +22,7 @@ class Queue():
     async def loop(self):
         while self.run == True:
             if len(self.queue) == 0:
-                asyncio.sleep(1)
+                await asyncio.sleep(1)
             else:
                 ensure_write(self.client, self.queue[0])
                 self.queue = self.queue[1:]
